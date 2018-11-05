@@ -35,17 +35,17 @@ More details for our algorithms can be found in the following papers:
 
 
 [1] **RecurJac: An Efficient Recursive Algorithm for Bounding Jacobian Matrix of Neural Networks and Its Applications**, 
-Huan Zhang, Pengchuan Zhang, Cho-Jui Hsieh, ([PDF](http://www.huan-zhang.com/pdf/recurjac_18.pdf))
+Huan Zhang, Pengchuan Zhang, Cho-Jui Hsieh, *AAAI 2019* ([PDF](https://arxiv.org/pdf/1810.11783.pdf))
 
 
 [2] **Efficient Neural Network Robustness Certification with General Activation Functions**, 
 Huan Zhang\*,Tsui-Wei Weng\*, Pin-Yu Chen, Cho-Jui Hsieh, Luca Daniel,
-NIPS 2018 ([PDF](http://web.cs.ucla.edu/~chohsieh/efficient-neural-network.pdf))
+*NIPS 2018* ([PDF](http://arxiv.org/pdf/1811.00866.pdf))
 
 
 [3] **Towards Fast Computation of Certified Robustness for ReLU Networks**, 
 Tsui-Wei Weng\*, Huan Zhang\*, Hongge Chen, Zhao Song, Cho-Jui Hsieh, Duane Boning, Inderjit S. Dhillon, Luca Daniel,
-ICML 2018 ([PDF](https://arxiv.org/abs/1804.09699))
+*ICML 2018* ([PDF](https://arxiv.org/abs/1804.09699))
 
 \* indicates equal contribution. BibTex citations can be found at the end of this document.
 
@@ -306,8 +306,8 @@ BibTex Entries
 @inproceedings{zhang2018recurjac,
   author = "Huan Zhang AND Pengchuan Zhang AND Cho-Jui Hsieh",
   title = "RecurJac: An Efficient Recursive Algorithm for Bounding Jacobian Matrix of Neural Networks and Its Applications",
-  booktitle = "Preprint",
-  year = "2018",
+  booktitle = "AAAI Conference on Artificial Intelligence (AAAI), arXiv preprint arXiv:1810.11783",
+  year = "2019",
   month = "dec"
 }
 ```
@@ -316,7 +316,7 @@ BibTex Entries
 @inproceedings{zhang2018crown,
   author = "Huan Zhang AND Tsui-Wei Weng AND Pin-Yu Chen AND Cho-Jui Hsieh AND Luca Daniel",
   title = "Efficient Neural Network Robustness Certification with General Activation Functions",
-  booktitle = "Advances in Neural Information Processing Systems (NIPS)",
+  booktitle = "Advances in Neural Information Processing Systems (NIPS), arXiv preprint arXiv:1811.00866",
   year = "2018",
   month = "dec"
 }
@@ -326,7 +326,7 @@ BibTex Entries
 @inproceedings{weng2018towardsfa,
   author = "Tsui-Wei Weng AND Huan Zhang AND Hongge Chen AND Zhao Song AND Cho-Jui Hsieh AND Duane Boning AND Inderjit S. Dhillon AND Luca Daniel",
   title = "Towards Fast Computation of Certified Robustness for ReLU Networks",
-  booktitle = "International Conference on Machine Learning (ICML)",
+  booktitle = "International Conference on Machine Learning (ICML), arXiv preprint arXiv:1804.09699",
   page = "5273-5282",
   year = "2018",
   month = "jul"
