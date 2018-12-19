@@ -53,37 +53,9 @@ class task(object):
             def binary_search_cond(current_eps):
                 robustness_lb = compute_bounds_integral(weights, biases, predict_label, target_label, inputs[i], preds[i], self.numlayer, args.norm, current_eps, args.lipsteps, args.layerbndalg, args.jacbndalg, untargeted = not self.targeted, activation = self.activation, activation_param = self.activation_param, lipsdir = args.lipsdir, lipsshift = args.lipsshift)
                 return robustness_lb == current_eps, robustness_lb
-            # perform binary search
+            # Using local Lipschitz constant to verify robustness. 
+            # perform binary search to adaptively find a good eps
             robustness_lb = binary_search(binary_search_cond, eps)
-
-            if False:
-                # Using local Lipschitz constant to verify robustness. 
-                # adaptively find a good eps
-                robustness_lb = compute_bounds_integral(weights, biases, predict_label, target_label, inputs[i], preds[i], self.numlayer, args.norm, args.eps, args.lipsteps, args.layerbndalg, args.jacbndalg, untargeted = not self.targeted, activation = self.activation, activation_param = self.activation_param, lipsdir = args.lipsdir, lipsshift = args.lipsshift)
-                # if initial eps is too small, then increase it
-                max_robustness_lb = robustness_lb
-                if robustness_lb == eps:
-                    while robustness_lb == eps:                   
-                        eps = eps*2
-                        print("*** eps too small, increase eps to {} ***".format(eps))
-                        robustness_lb = compute_bounds_integral(weights, biases, predict_label, target_label, inputs[i], preds[i], self.numlayer, args.norm, eps, args.lipsteps, args.layerbndalg, args.jacbndalg, untargeted = not self.targeted, activation = self.activation, activation_param = self.activation_param, lipsdir = args.lipsdir, lipsshift = args.lipsshift)
-                        max_robustness_lb = max(robustness_lb, max_robustness_lb)
-                # if initial eps is too large, then decrease it
-                elif robustness_lb <= eps / 5:
-                    # this makes eps decrease quickly
-                    while robustness_lb <= eps / 5:
-                        eps = eps/5
-                        print("*** eps too large, decrease eps to {} ***".format(eps))
-                        robustness_lb = compute_bounds_integral(weights, biases, predict_label, target_label, inputs[i], preds[i], self.numlayer, args.norm, eps, args.lipsteps, args.layerbndalg, args.jacbndalg, untargeted = not self.targeted, activation = self.activation, activation_param = self.activation_param, lipsdir = args.lipsdir, lipsshift = args.lipsshift)
-                        max_robustness_lb = max(robustness_lb, max_robustness_lb)
-                    # after decreasing it, try to increase it a little bit
-                    while robustness_lb == eps:             
-                        eps = eps*2
-                        print("*** final adjustment on eps, increase eps to {} ***".format(eps))
-                        robustness_lb = compute_bounds_integral(weights, biases, predict_label, target_label, inputs[i], preds[i], self.numlayer, args.norm, eps, args.lipsteps, args.layerbndalg, args.jacbndalg, untargeted = not self.targeted, activation = self.activation, activation_param = self.activation_param, lipsdir = args.lipsdir, lipsshift = args.lipsshift)
-                        max_robustness_lb = max(robustness_lb, max_robustness_lb)
-                print('max_robustness_lb = {}, robustness_lb = {}'.format(max_robustness_lb, robustness_lb))
-                robustness_lb = max_robustness_lb
         else:
             # use linear outer bounds to verify robustness
             def binary_search_cond(current):

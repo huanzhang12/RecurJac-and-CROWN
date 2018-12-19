@@ -109,7 +109,6 @@ def compute_bounds_integral(weights, biases, pred_label, target_label, x0, predi
 
 
 def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, numlayer, p, eps, layerbndalg, jacbndalg, **kwargs): 
-    print(kwargs)
     untargeted=kwargs.pop('untargeted', False)
     use_quad=kwargs.pop('use_quad', False)
     activation=kwargs.pop('activation', "relu")
