@@ -97,7 +97,7 @@ def fastlin_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,diags,x0,eps,p_n):
     Ax0 = np.dot(A,x0)
 
     # dual norm
-    q_n = np.inf if p_n == 0 else 1.0 / (1.0 - 1.0 / p_n)
+    q_n = np.inf if p_n == 1 else 1.0 / (1.0 - 1.0 / p_n)
     for j in range(A.shape[0]):        
         dualnorm_Aj = np.linalg.norm(A[j], q_n)
         UB_final[j] += (Ax0[j]+eps*dualnorm_Aj)
