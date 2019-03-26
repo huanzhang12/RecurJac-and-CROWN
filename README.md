@@ -35,7 +35,7 @@ More details for our algorithms can be found in the following papers:
 
 
 [1] **RecurJac: An Efficient Recursive Algorithm for Bounding Jacobian Matrix of Neural Networks and Its Applications**, 
-Huan Zhang, Pengchuan Zhang, Cho-Jui Hsieh, *AAAI 2019* ([PDF](https://arxiv.org/pdf/1810.11783.pdf))
+Huan Zhang, Pengchuan Zhang, Cho-Jui Hsieh, *AAAI 2019* ([PDF](https://arxiv.org/pdf/1810.11783.pdf)) ([Slides](http://www.huan-zhang.com/pdf/RecurJac_Slides.pdf))
 
 
 [2] **Efficient Neural Network Robustness Certification with General Activation Functions**, 
