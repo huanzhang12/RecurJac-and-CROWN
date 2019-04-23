@@ -40,6 +40,7 @@ class task(object):
         biases = self.biases
         inputs = self.inputs
         preds = self.preds
+        steps = args.steps
         eps = args.eps
 
         self.Nsamp += 1
@@ -55,7 +56,7 @@ class task(object):
                 return robustness_lb == current_eps, robustness_lb
             # Using local Lipschitz constant to verify robustness. 
             # perform binary search to adaptively find a good eps
-            robustness_lb = binary_search(binary_search_cond, eps)
+            robustness_lb = binary_search(binary_search_cond, eps, max_steps = steps)
         else:
             # use linear outer bounds to verify robustness
             def binary_search_cond(current):
@@ -63,7 +64,7 @@ class task(object):
                 return gap_gx >=0, gap_gx
             
             # perform binary search
-            robustness_lb = binary_search(binary_search_cond, eps)
+            robustness_lb = binary_search(binary_search_cond, eps, max_steps = steps)
 
         self.robustness_lb_sum += robustness_lb
         # get the gradient at this data point
