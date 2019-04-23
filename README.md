@@ -73,8 +73,8 @@ quite slow on AMD CPUs.
 After installing prerequisites, clone our repository:
 
 ```
-git clone https://github.com/huanzhang12/RecurJac-Lipschitz-Bound.git
-cd RecurJac-Lipschitz-Bound
+git clone https://github.com/huanzhang12/RecurJac.git
+cd RecurJac
 ```
 
 Our pretrained models can be download here:
