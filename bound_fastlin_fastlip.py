@@ -28,7 +28,7 @@ def init_fastlin_bounds(Ws):
 
 # matrix version of get_layer_bound_relax
 @jit(nopython=True)
-def fastlin_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,diags,x0,eps,p_n):
+def fastlin_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,diags,x0,eps,p_n,skip=False):
     assert nlayer >= 2
     assert nlayer == len(Ws) == len(bs) == len(UBs) == len(LBs) == (len(neuron_state) + 1) == len(diags)
 
@@ -50,6 +50,8 @@ def fastlin_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,diags,x0,eps,p_n):
     # step 5: bounding l_n term for each layer
     UB_final = np.zeros_like(constants)
     LB_final = np.zeros_like(constants)
+    if skip:
+        return UB_final, LB_final
     # first A is W_{nlayer} D_{nlayer}
     A = Ws[nlayer-1] * diags[nlayer-1]
     for i in range(nlayer-1, 0, -1):

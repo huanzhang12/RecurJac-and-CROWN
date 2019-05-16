@@ -38,11 +38,15 @@ def get_weights_list(model):
         print("Hidden layer {} bias shape: {}".format(i,bias_Ui.shape))
 
     # last layer weights: W
-    [W, bias_W] = model.W.get_weights()    
+    [W, bias_W] = model.W.get_weights()
     weights.append(np.ascontiguousarray(np.transpose(W)))
     bias.append(np.ascontiguousarray(np.transpose(bias_W)))
     print("Last layer weight shape: {}".format(W.shape))
     print("Last layer bias shape: {}".format(bias_W.shape))
+
+    for i, w in enumerate(weights):
+        for p in [1,2,np.inf]:
+            print("Layer {}, L_{} norm: {}".format(i, p, np.linalg.norm(w, p)))
     
     return weights, bias   
 
@@ -73,6 +77,8 @@ def get_first_layer_bound(W_Nk,b_Nk,UB_prev,LB_prev,x0,eps,p_n):
         UB_Nk[ii] = np.dot(W_Nk[ii], gamma[ii])+b_Nk[ii]
         LB_Nk[ii] = np.dot(W_Nk[ii], eta[ii])+b_Nk[ii]
 
+    # print(UB_Nk)
+    # print(LB_Nk)
     return UB_Nk, LB_Nk
     
     Ax0 = np.dot(W_Nk,x0)
@@ -109,6 +115,17 @@ def compute_bounds_integral(weights, biases, pred_label, target_label, x0, predi
     print("[L2][verification success] eps = {:.4f}".format(e))
     return eps
 
+
+def myprint(UB_Nk, LB_Nk):
+    return
+    np.set_printoptions(suppress=True)
+    print('LB', LB_Nk)
+    print('UB', UB_Nk)
+    print('diff', ReLU(UB_Nk) - ReLU(LB_Nk))
+    tight = LB_Nk * UB_Nk
+    print('tight', tight)
+    print(np.sum(np.minimum(tight, 0)))
+    input()
 
 def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, numlayer, p, eps, layerbndalg, jacbndalg, **kwargs): 
     untargeted=kwargs.pop('untargeted', False)
@@ -156,7 +173,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
 
     
     ## weights and biases are already transposed
-    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval":
+    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval" or layerbndalg == "fastlin-interval":
         # contains numlayer arrays, each corresponding to a pre-ReLU bound
         preReLU_UB = []
         preReLU_LB = []
@@ -164,6 +181,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
         # for the first layer, we use a simple dual-norm based bound
         num = 0
         UB, LB = get_first_layer_bound(weights[num],biases[num],UBs[num],LBs[num], None, None, p_n)
+        myprint(UB, LB)
         # save those pre-ReLU bounds
         preReLU_UB.append(UB)
         preReLU_LB.append(LB)
@@ -179,10 +197,19 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
         print("layer", num, sum(neuron_states[-1] == -1), "neurons never activated,", 
                             sum(neuron_states[-1] == +1), "neurons always activated")                               
 
+
         # we skip the last layer, which will be dealt later
         for num in range(1,numlayer-1):
             if layerbndalg == "interval":
                 UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, None, None, p_n)
+            if layerbndalg == "fastlin-interval":
+                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, None, None, p_n)
+                # update diagonal matrix only, do not compute
+                fastlin_bound(tuple(weights[:num+1]),tuple(biases[:num+1]),
+                tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
+                tuple(neuron_states),
+                num + 1,tuple(diags[:num+1]),
+                x0,eps,p_n, skip = True)
             if layerbndalg == "fastlin":
                 UB, LB = fastlin_bound(tuple(weights[:num+1]),tuple(biases[:num+1]),
                 tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
@@ -215,6 +242,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
                 print("Quadratic bound improved {} of {} UBs".format(np.sum(UB_prev != UB), len(UB)))
                 print("Quadratic bound improved {} of {} LBs".format(np.sum(LB_prev != LB), len(LB)))
 
+            myprint(UB, LB)
             # last layer has no activation
             # save those pre-ReLU bounds
             preReLU_UB.append(UB)
@@ -251,10 +279,10 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
         else:
             W_last = np.expand_dims(W[c] - W[j], axis=0)
             b_last = np.expand_dims(bias[c] - bias[j], axis=0)
-    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval":
+    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval" or layerbndalg == "fastlin-interval":
         if layerbndalg == "interval":
             UB, LB = get_first_layer_bound(W_last, b_last, UB, LB, None, None, p_n)
-        if layerbndalg == "fastlin":
+        if layerbndalg == "fastlin" or layerbndalg == "fastlin-interval":
             # the last layer's weight has been replaced
             UB, LB = fastlin_bound(tuple(weights[:num]+[W_last]),tuple(biases[:num]+[b_last]),
             tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
@@ -290,6 +318,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
             LB = max(LB_quad, LB)
             print("Quadratic bound improved {} of {} UBs".format(np.sum(UB_prev != UB), len(UB)))
             print("Quadratic bound improved {} of {} LBs".format(np.sum(LB_prev != LB), len(LB)))
+        myprint(UB, LB)
 
     # Print bounds results
     print("epsilon = {:.5f}".format(eps))

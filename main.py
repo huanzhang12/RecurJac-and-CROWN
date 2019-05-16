@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument('--layerbndalg',
                 default = "crown-general",
                 type = str,
-                choices = ["crown-general", "crown-adaptive", "fastlin", "interval", "spectral"],
+                choices = ["crown-general", "crown-adaptive", "fastlin", "interval", "fastlin-interval", "spectral"],
                 help='Algorithm to compute layer-wise upper and lower bounds. "crown-general": CROWN for general activation functions, "crown-adaptive": CROWN for ReLU with adaptive upper and lower bounds, "fastlin": Fast-Lin, "interval": Interval Bound Propagation, "spectral": spectral norm bounds (special, when use "spectral" bound we simply multiply each layer\'s operator norm).')
     parser.add_argument('--jacbndalg',
                 type = str,
