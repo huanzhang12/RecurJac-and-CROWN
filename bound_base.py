@@ -173,7 +173,8 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
 
     
     ## weights and biases are already transposed
-    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval" or layerbndalg == "fastlin-interval":
+    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or \
+            layerbndalg == "interval" or layerbndalg == "fastlin-interval" or layerbndalg == "crown-interval":
         # contains numlayer arrays, each corresponding to a pre-ReLU bound
         preReLU_UB = []
         preReLU_LB = []
@@ -216,6 +217,13 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
                 tuple(neuron_states),
                 num + 1,tuple(diags[:num+1]),
                 x0,eps,p_n)
+            if layerbndalg == "crown-interval":
+                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, None, None, p_n)
+                crown_adaptive_bound(tuple(weights[:num+1]),tuple(biases[:num+1]),
+                tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
+                tuple(neuron_states),
+                num + 1,tuple(diags[:num+1]),
+                x0,eps,p_n, skip = True)
             if layerbndalg == "crown-adaptive":
                 UB, LB = crown_adaptive_bound(tuple(weights[:num+1]),tuple(biases[:num+1]),
                 tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
@@ -279,7 +287,8 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
         else:
             W_last = np.expand_dims(W[c] - W[j], axis=0)
             b_last = np.expand_dims(bias[c] - bias[j], axis=0)
-    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval" or layerbndalg == "fastlin-interval":
+    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval" \
+            or layerbndalg == "fastlin-interval" or layerbndalg == "crown-interval":
         if layerbndalg == "interval":
             UB, LB = get_first_layer_bound(W_last, b_last, UB, LB, None, None, p_n)
         if layerbndalg == "fastlin" or layerbndalg == "fastlin-interval":
@@ -289,7 +298,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
             tuple(neuron_states),
             numlayer,tuple(diags),
             x0,eps,p_n)
-        if layerbndalg == "crown-adaptive":
+        if layerbndalg == "crown-adaptive" or layerbndalg == "crown-interval":
             UB, LB = crown_adaptive_bound(tuple(weights[:num]+[W_last]),tuple(biases[:num]+[b_last]),
             tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
             tuple(neuron_states),

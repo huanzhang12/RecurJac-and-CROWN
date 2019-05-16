@@ -283,7 +283,7 @@ def crown_general_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,bounds_ul,x0,eps,p_n):
 
 # adaptive matrix version of get_layer_bound_relax
 @jit(nopython=True)
-def crown_adaptive_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,diags,x0,eps,p_n):
+def crown_adaptive_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,diags,x0,eps,p_n,skip = False):
     assert nlayer >= 2
     assert nlayer == len(Ws) == len(bs) == len(UBs) == len(LBs) == (len(neuron_state) + 1) == len(diags)
 
@@ -307,6 +307,8 @@ def crown_adaptive_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,diags,x0,eps,p_n):
     # step 5: bounding l_n term for each layer
     UB_final = np.zeros_like(constants_ub)
     LB_final = np.zeros_like(constants_lb)
+    if skip:
+        return UB_final, LB_final
     # first A is W_{nlayer} D_{nlayer}
     # A_UB = Ws[nlayer-1] * diags[nlayer-1]
     A_UB = np.copy(Ws[nlayer-1])
