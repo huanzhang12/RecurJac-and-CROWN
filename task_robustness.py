@@ -23,6 +23,7 @@ class task(object):
                 exec('self.{} = kwargs["{}"]'.format(k, k))
         self.Nsamp = 0
         self.robustness_lb_sum = 0.0
+        self.robust_error = 0
         # not force label
         assert not self.args.targettype.isdecimal()
         print("starting robustness verification on {} images!".format(len(self.inputs)))
@@ -67,6 +68,8 @@ class task(object):
             robustness_lb = binary_search(binary_search_cond, eps, max_steps = steps)
 
         self.robustness_lb_sum += robustness_lb
+        if robustness_lb < eps - 1e-5:
+            self.robust_error += 1
         # get the gradient at this data point
         gradients = self.model.get_gradient(inputs[i:i+1])
         obj_grad = gradients[predict_label] - gradients[target_label]
@@ -77,5 +80,5 @@ class task(object):
         print("[L1] model = {}, seq = {}, id = {}, true_class = {}, target_class = {}, info = {}, robustness_lb = {:.5f}, avg_robustness_lb = {:.5f}, margin = {:.4f}, grad_norm = {:.4f}, time = {:.4f}".format(self.modelfile, i, self.true_ids[i], predict_label, target_label, self.img_info[i], robustness_lb, self.robustness_lb_sum/self.Nsamp, margin, grad_norm, time.time() - start))
 
     def summary(self, **kwargs):
-        print("[L0] model = {}, avg robustness_lb = {:.5f}, numimage = {}".format(self.modelfile,self.robustness_lb_sum/self.Nsamp,self.Nsamp))
+        print("[L0] model = {}, robust error = {:.5f}, avg robustness_lb = {:.5f}, numimage = {}".format(self.modelfile, float(self.robust_error) / self.Nsamp, self.robustness_lb_sum/self.Nsamp,self.Nsamp))
 

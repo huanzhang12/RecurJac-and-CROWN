@@ -54,8 +54,8 @@ if __name__ == "__main__":
     parser.add_argument('--layerbndalg',
                 default = "crown-general",
                 type = str,
-                choices = ["crown-general", "crown-adaptive", "fastlin", "spectral"],
-                help='Algorithm to compute layer-wise upper and lower bounds. "crown-general": CROWN for general activation functions, "crown-adaptive": CROWN for ReLU with adaptive upper and lower bounds, "fastlin": Fast-Lin, "spectral": spectral norm bounds (special, when use "spectral" bound we simply multiply each layer\'s operator norm).')
+                choices = ["crown-general", "crown-adaptive", "fastlin", "interval", "spectral"],
+                help='Algorithm to compute layer-wise upper and lower bounds. "crown-general": CROWN for general activation functions, "crown-adaptive": CROWN for ReLU with adaptive upper and lower bounds, "fastlin": Fast-Lin, "interval": Interval Bound Propagation, "spectral": spectral norm bounds (special, when use "spectral" bound we simply multiply each layer\'s operator norm).')
     parser.add_argument('--jacbndalg',
                 type = str,
                 default = "disable",
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     weight_dims, activation, activation_param, input_dim = get_model_meta(modelfile)
     numlayer = len(weight_dims)
     if args.dataset == "auto":
-        if input_dim[2] == 28:
+        if input_dim[2] == 28 or input_dim[2] == "28":
             args.dataset = "mnist"
         elif input_dim[2] == 32:
             args.dataset = "cifar"

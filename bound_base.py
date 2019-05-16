@@ -72,6 +72,8 @@ def get_first_layer_bound(W_Nk,b_Nk,UB_prev,LB_prev,x0,eps,p_n):
               
         UB_Nk[ii] = np.dot(W_Nk[ii], gamma[ii])+b_Nk[ii]
         LB_Nk[ii] = np.dot(W_Nk[ii], eta[ii])+b_Nk[ii]
+
+    return UB_Nk, LB_Nk
     
     Ax0 = np.dot(W_Nk,x0)
     # dual norm
@@ -154,14 +156,14 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
 
     
     ## weights and biases are already transposed
-    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin":
+    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval":
         # contains numlayer arrays, each corresponding to a pre-ReLU bound
         preReLU_UB = []
         preReLU_LB = []
         
         # for the first layer, we use a simple dual-norm based bound
         num = 0
-        UB, LB = get_first_layer_bound(weights[num],biases[num],UBs[num],LBs[num],x0,eps,p_n)
+        UB, LB = get_first_layer_bound(weights[num],biases[num],UBs[num],LBs[num], None, None, p_n)
         # save those pre-ReLU bounds
         preReLU_UB.append(UB)
         preReLU_LB.append(LB)
@@ -179,6 +181,8 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
 
         # we skip the last layer, which will be dealt later
         for num in range(1,numlayer-1):
+            if layerbndalg == "interval":
+                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, None, None, p_n)
             if layerbndalg == "fastlin":
                 UB, LB = fastlin_bound(tuple(weights[:num+1]),tuple(biases[:num+1]),
                 tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
@@ -247,7 +251,9 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
         else:
             W_last = np.expand_dims(W[c] - W[j], axis=0)
             b_last = np.expand_dims(bias[c] - bias[j], axis=0)
-    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin":
+    if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval":
+        if layerbndalg == "interval":
+            UB, LB = get_first_layer_bound(W_last, b_last, UB, LB, None, None, p_n)
         if layerbndalg == "fastlin":
             # the last layer's weight has been replaced
             UB, LB = fastlin_bound(tuple(weights[:num]+[W_last]),tuple(biases[:num]+[b_last]),
