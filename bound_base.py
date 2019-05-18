@@ -134,6 +134,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
     activation_param=kwargs.pop('activation_param', 0.3)
     lipsdir=kwargs.pop('lipsdir', -1)
     lipsshift=kwargs.pop('lipsshift', 1)
+    bounded_input=kwargs.pop('bounded_input', False)
     assert len(kwargs) == 0, "unknow parameters " + str(kwargs)
     ### input example x0 
     # 784 by 1 (cifar: 3072 by 1)
@@ -141,6 +142,9 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
     # currently only supports p = "i"
     UB_N0 = x0 + eps
     LB_N0 = x0 - eps
+    if bounded_input:
+        UB_N0 = np.minimum(UB_N0, 1.0)
+        LB_N0 = np.maximum(LB_N0, 0.0)
     
     # convert p into numba compatible form
     p_n = p

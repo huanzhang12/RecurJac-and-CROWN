@@ -33,7 +33,7 @@ class task(object):
         if args.layerbndalg == "spectral":
             spectral_bound(self.weights, self.biases, 0, 1, self.inputs[0], self.preds[0], self.numlayer, self.activation, args.norm, not self.targeted)
         else:
-            compute_bounds(self.weights, self.biases, 0, 1, self.inputs[0], self.preds[0], self.numlayer,args.norm, 0.01, args.layerbndalg, args.jacbndalg, untargeted = not self.targeted, use_quad = args.quad, activation = self.activation, activation_param = self.activation_param)
+            compute_bounds(self.weights, self.biases, 0, 1, self.inputs[0], self.preds[0], self.numlayer,args.norm, 0.01, args.layerbndalg, args.jacbndalg, untargeted = not self.targeted, use_quad = args.quad, activation = self.activation, activation_param = self.activation_param, bounded_input = self.bounded_input)
 
     def run_single(self, i):
         args = self.args
@@ -61,7 +61,7 @@ class task(object):
         else:
             # use linear outer bounds to verify robustness
             def binary_search_cond(current):
-                gap_gx, _, _, _= compute_bounds(weights, biases, predict_label, target_label, inputs[i], preds[i], self.numlayer, args.norm, current, args.layerbndalg, "disable", untargeted = not self.targeted, use_quad = args.quad, activation = self.activation, activation_param = self.activation_param)
+                gap_gx, _, _, _= compute_bounds(weights, biases, predict_label, target_label, inputs[i], preds[i], self.numlayer, args.norm, current, args.layerbndalg, "disable", untargeted = not self.targeted, use_quad = args.quad, activation = self.activation, activation_param = self.activation_param, bounded_input = self.bounded_input)
                 return gap_gx >=0, gap_gx
             
             # perform binary search
