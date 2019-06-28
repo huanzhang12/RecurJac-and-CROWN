@@ -57,39 +57,39 @@ def ReLU(vec):
 @njit
 def get_first_layer_bound(W_Nk,b_Nk,UB_prev,LB_prev,x0,eps,p_n):
 
-    gamma = np.empty_like(W_Nk)
-    eta = np.empty_like(gamma)
-    UB_Nk = np.empty_like(b_Nk)
-    LB_Nk = np.empty_like(b_Nk)
-    
-    UB_first = np.empty_like(b_Nk)
-    LB_first = np.empty_like(b_Nk)
+    if p_n == np.inf:
+        # for Linf norm we consider bounds for each individual element and do not use eps
+        gamma = np.empty_like(W_Nk)
+        eta = np.empty_like(gamma)
+        UB_Nk = np.empty_like(b_Nk)
+        LB_Nk = np.empty_like(b_Nk)
+        
+        for ii in range(W_Nk.shape[0]):
+            for jj in range(W_Nk.shape[1]):
+                if W_Nk[ii,jj] > 0:
+                    gamma[ii,jj] = UB_prev[jj]
+                    eta[ii,jj] = LB_prev[jj]
+                else:
+                    gamma[ii,jj] = LB_prev[jj]
+                    eta[ii,jj] = UB_prev[jj]
+                  
+            UB_Nk[ii] = np.dot(W_Nk[ii], gamma[ii])+b_Nk[ii]
+            LB_Nk[ii] = np.dot(W_Nk[ii], eta[ii])+b_Nk[ii]
 
-    for ii in range(W_Nk.shape[0]):
-        for jj in range(W_Nk.shape[1]):
-            if W_Nk[ii,jj] > 0:
-                gamma[ii,jj] = UB_prev[jj]
-                eta[ii,jj] = LB_prev[jj]
-            else:
-                gamma[ii,jj] = LB_prev[jj]
-                eta[ii,jj] = UB_prev[jj]
-              
-        UB_Nk[ii] = np.dot(W_Nk[ii], gamma[ii])+b_Nk[ii]
-        LB_Nk[ii] = np.dot(W_Nk[ii], eta[ii])+b_Nk[ii]
+        return UB_Nk, LB_Nk
+   
+    else:
+        Ax0 = np.dot(W_Nk,x0)
+        UB_first = np.empty_like(b_Nk)
+        LB_first = np.empty_like(b_Nk)
+        # dual norm for all other norms
+        q_n = int(1.0/ (1.0 - 1.0/p_n)) if p_n != 1 else np.inf
+        for j in range(W_Nk.shape[0]):
+            dualnorm_Aj = np.linalg.norm(W_Nk[j], q_n)
+            UB_first[j] = Ax0[j]+eps*dualnorm_Aj+b_Nk[j]
+            LB_first[j] = Ax0[j]-eps*dualnorm_Aj+b_Nk[j]
 
-    # print(UB_Nk)
-    # print(LB_Nk)
-    return UB_Nk, LB_Nk
-    
-    Ax0 = np.dot(W_Nk,x0)
-    # dual norm
-    q_n = int(1.0/ (1.0 - 1.0/p_n)) if p_n != 1 else np.inf
-    for j in range(W_Nk.shape[0]):
-        dualnorm_Aj = np.linalg.norm(W_Nk[j], q_n)
-        UB_first[j] = Ax0[j]+eps*dualnorm_Aj+b_Nk[j]
-        LB_first[j] = Ax0[j]-eps*dualnorm_Aj+b_Nk[j]
-
-    return UB_first, LB_first
+        return UB_first, LB_first
 
 
 def compute_bounds_integral(weights, biases, pred_label, target_label, x0, predictions, numlayer, p, eps, steps, layerbndalg, jacbndalg, **kwargs):
@@ -185,7 +185,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
         
         # for the first layer, we use a simple dual-norm based bound
         num = 0
-        UB, LB = get_first_layer_bound(weights[num],biases[num],UBs[num],LBs[num], None, None, p_n)
+        UB, LB = get_first_layer_bound(weights[num],biases[num],UBs[num],LBs[num], x0, eps, p_n)
         myprint(UB, LB)
         # save those pre-ReLU bounds
         preReLU_UB.append(UB)
@@ -206,9 +206,10 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
         # we skip the last layer, which will be dealt later
         for num in range(1,numlayer-1):
             if layerbndalg == "interval":
-                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, None, None, p_n)
+                # all itermediate layers
+                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, x0, eps, np.inf)
             if layerbndalg == "fastlin-interval":
-                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, None, None, p_n)
+                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, x0, eps, np.inf)
                 # update diagonal matrix only, do not compute
                 fastlin_bound(tuple(weights[:num+1]),tuple(biases[:num+1]),
                 tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
@@ -222,7 +223,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
                 num + 1,tuple(diags[:num+1]),
                 x0,eps,p_n)
             if layerbndalg == "crown-interval":
-                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, None, None, p_n)
+                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, x0, eps, np.inf)
                 crown_adaptive_bound(tuple(weights[:num+1]),tuple(biases[:num+1]),
                 tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
                 tuple(neuron_states),
@@ -294,7 +295,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
     if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval" \
             or layerbndalg == "fastlin-interval" or layerbndalg == "crown-interval":
         if layerbndalg == "interval":
-            UB, LB = get_first_layer_bound(W_last, b_last, UB, LB, None, None, p_n)
+            UB, LB = get_first_layer_bound(W_last, b_last, UB, LB, x0, eps, np.inf)
         if layerbndalg == "fastlin" or layerbndalg == "fastlin-interval":
             # the last layer's weight has been replaced
             UB, LB = fastlin_bound(tuple(weights[:num]+[W_last]),tuple(biases[:num]+[b_last]),
