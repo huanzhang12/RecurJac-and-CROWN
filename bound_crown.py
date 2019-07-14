@@ -12,6 +12,7 @@
 from numba import jit, njit
 import numpy as np
 from activation_functions import *
+from bound_interval import interval_bound
 
 # for numba
 linear_wrapper_constructed = False
@@ -173,29 +174,6 @@ def crown_general_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,bounds_ul,x0,eps,p_n):
         upper_b = bounds_ul[i][1]
         lower_k = bounds_ul[i][2]
         lower_b = bounds_ul[i][3]
-        """
-        if not np.isfinite(upper_k).all():
-            print("upper_k nan detected", i)
-            return UB_final, LB_final
-        if not np.isfinite(upper_b).all():
-            print("upper_b nan detected", i)
-            return UB_final, LB_final
-        if not np.isfinite(lower_k).all():
-            print("lower_k nan detected", i)
-            return UB_final, LB_final
-        if not np.isfinite(lower_b).all():
-            print("lower_b nan detected", i)
-            print(lower_b)
-            loc = np.argwhere(np.isinf(lower_b))
-            print(loc)
-            u = UBs[i][loc]
-            l = LBs[i][loc]
-            print(u, l)
-            print(general_lb_p(u, l, act_tanh, act_tanh_d))
-            print(general_ub_p(u, l, act_tanh, act_tanh_d))
-            print(lower_b[loc])
-            return UB_final, LB_final
-        """
         # bound the term A[i] * l_[i], for each element
         for j in range(A_UB.shape[0]):
             # index for positive entries in A for upper bound
@@ -218,20 +196,6 @@ def crown_general_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,bounds_ul,x0,eps,p_n):
             # for lower bound, set the neurons with positve entries in A to lower bound
             diags_lb[idx_pos_lb] = lower_k[idx_pos_lb]
             l_lb[idx_pos_lb] = lower_b[idx_pos_lb]
-            """
-            if not np.isfinite(A_UB[j]).all():
-                print("A_UB[j] nan detected", i, j)
-                return UB_final, LB_final
-            if not np.isfinite(A_LB[j]).all():
-                print("A_LB[j] nan detected", i, j)
-                return UB_final, LB_final
-            if not np.isfinite(l_ub).all():
-                print("l_ub nan detected", i, j)
-                return UB_final, LB_final
-            if not np.isfinite(l_lb).all():
-                print("l_lb nan detected", i, j)
-                return UB_final, LB_final
-            """
             # compute the relavent terms
             UB_final[j] += np.dot(A_UB[j], l_ub)
             LB_final[j] += np.dot(A_LB[j], l_lb)
@@ -239,45 +203,21 @@ def crown_general_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,bounds_ul,x0,eps,p_n):
             A_UB[j] = A_UB[j] * diags_ub
             # update A with diagonal matrice
             A_LB[j] = A_LB[j] * diags_lb
-            """
-            if not np.isfinite(UB_final).all():
-                print("UB_final nan detected", i, j)
-                return UB_final, LB_final
-            if not np.isfinite(LB_final).all():
-                print("LB_final nan detected", i, j)
-                return UB_final, LB_final
-            """
         # constants of previous layers
         constants_ub += np.dot(A_UB, bs[i-1])
         constants_lb += np.dot(A_LB, bs[i-1])
-        """
-        if not np.isfinite(constants_ub).all():
-            print("constants_ub nan detected", i, j)
-            return UB_final, LB_final
-        if not np.isfinite(constants_lb).all():
-            print("constants_lb nan detected", i, j)
-            return UB_final, LB_final
-        """
         # compute A for next loop
         # diags matrices is multiplied above
         A_UB = np.dot(A_UB, Ws[i-1])
         A_LB = np.dot(A_LB, Ws[i-1])
     # after the loop is done we get A0
-    UB_final += constants_ub
-    LB_final += constants_lb
-
-    # step 6: bounding A0 * x
-    x_UB = np.empty_like(UBs[0])
-    x_LB = np.empty_like(LBs[0])
     
-    Ax0_UB = np.dot(A_UB,x0)
-    Ax0_LB = np.dot(A_LB,x0)
-    q_n = int(1.0/ (1.0 - 1.0/p_n)) if p_n != 1 else np.inf
-    for j in range(A_UB.shape[0]):        
-        dualnorm_Aj_ub = np.linalg.norm(A_UB[j], q_n)
-        dualnorm_Aj_lb = np.linalg.norm(A_LB[j], q_n)
-        UB_final[j] += (Ax0_UB[j]+eps*dualnorm_Aj_ub)
-        LB_final[j] += (Ax0_LB[j]-eps*dualnorm_Aj_lb)
+    # now we have obtained A_L x + b_L f(x) <= A_U x + b_U
+    # treat it as a one layer network and obtain bounds
+    UB_first, _ = interval_bound(A_UB, constants_ub, UBs[0], LBs[0], x0, eps, p_n)
+    _, LB_first = interval_bound(A_LB, constants_lb, UBs[0], LBs[0], x0, eps, p_n)
+    UB_final += UB_first
+    LB_final += LB_first
     
     return UB_final, LB_final
 
@@ -371,21 +311,13 @@ def crown_adaptive_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,diags,x0,eps,p_n,skip
         A_UB = np.dot(A_UB, Ws[i-1])
         A_LB = np.dot(A_LB, Ws[i-1])
     # after the loop is done we get A0
-    UB_final += constants_ub
-    LB_final += constants_lb
 
-    # step 6: bounding A0 * x
-    x_UB = np.empty_like(UBs[0])
-    x_LB = np.empty_like(LBs[0])
-    
-    Ax0_UB = np.dot(A_UB,x0)
-    Ax0_LB = np.dot(A_LB,x0)
-    q_n = int(1.0/ (1.0 - 1.0/p_n)) if p_n != 1 else np.inf
-    for j in range(A_UB.shape[0]):        
-        dualnorm_Aj_ub = np.linalg.norm(A_UB[j], q_n) # L2 norm of A[j]
-        dualnorm_Aj_lb = np.linalg.norm(A_LB[j], q_n) # L2 norm of A[j]
-        UB_final[j] += (Ax0_UB[j]+eps*dualnorm_Aj_ub)
-        LB_final[j] += (Ax0_LB[j]-eps*dualnorm_Aj_lb)
+    # now we have obtained A_L x + b_L f(x) <= A_U x + b_U
+    # treat it as a one layer network and obtain bounds
+    UB_first, _ = interval_bound(A_UB, constants_ub, UBs[0], LBs[0], x0, eps, p_n)
+    _, LB_first = interval_bound(A_LB, constants_lb, UBs[0], LBs[0], x0, eps, p_n)
+    UB_final += UB_first
+    LB_final += LB_first
 
     return UB_final, LB_final
 

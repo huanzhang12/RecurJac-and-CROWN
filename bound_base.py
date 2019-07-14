@@ -12,6 +12,7 @@
 import sys
 from numba import jit, njit
 import numpy as np
+from bound_interval import interval_bound
 from bound_fastlin_fastlip import init_fastlin_bounds, fastlin_bound, fastlip_bound, fastlip_leaky_bound
 from bound_crown import crown_adaptive_bound, crown_general_bound, init_crown_bounds, compile_crown_bounds
 from bound_crown_quad import crown_quad_bound
@@ -53,44 +54,6 @@ def get_weights_list(model):
 @jit(nopython=True)
 def ReLU(vec):
     return np.maximum(vec, 0)
-
-@njit
-def get_first_layer_bound(W_Nk,b_Nk,UB_prev,LB_prev,x0,eps,p_n):
-
-    if p_n == np.inf:
-        # for Linf norm we consider bounds for each individual element and do not use eps
-        gamma = np.empty_like(W_Nk)
-        eta = np.empty_like(gamma)
-        UB_Nk = np.empty_like(b_Nk)
-        LB_Nk = np.empty_like(b_Nk)
-        
-        for ii in range(W_Nk.shape[0]):
-            for jj in range(W_Nk.shape[1]):
-                if W_Nk[ii,jj] > 0:
-                    gamma[ii,jj] = UB_prev[jj]
-                    eta[ii,jj] = LB_prev[jj]
-                else:
-                    gamma[ii,jj] = LB_prev[jj]
-                    eta[ii,jj] = UB_prev[jj]
-                  
-            UB_Nk[ii] = np.dot(W_Nk[ii], gamma[ii])+b_Nk[ii]
-            LB_Nk[ii] = np.dot(W_Nk[ii], eta[ii])+b_Nk[ii]
-
-        return UB_Nk, LB_Nk
-   
-    else:
-        Ax0 = np.dot(W_Nk,x0)
-        UB_first = np.empty_like(b_Nk)
-        LB_first = np.empty_like(b_Nk)
-        # dual norm for all other norms
-        q_n = int(1.0/ (1.0 - 1.0/p_n)) if p_n != 1 else np.inf
-        for j in range(W_Nk.shape[0]):
-            dualnorm_Aj = np.linalg.norm(W_Nk[j], q_n)
-            UB_first[j] = Ax0[j]+eps*dualnorm_Aj+b_Nk[j]
-            LB_first[j] = Ax0[j]-eps*dualnorm_Aj+b_Nk[j]
-
-        return UB_first, LB_first
-
 
 def compute_bounds_integral(weights, biases, pred_label, target_label, x0, predictions, numlayer, p, eps, steps, layerbndalg, jacbndalg, **kwargs):
     budget = None
@@ -185,7 +148,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
         
         # for the first layer, we use a simple dual-norm based bound
         num = 0
-        UB, LB = get_first_layer_bound(weights[num],biases[num],UBs[num],LBs[num], x0, eps, p_n)
+        UB, LB = interval_bound(weights[num],biases[num],UBs[num],LBs[num], x0, eps, p_n)
         myprint(UB, LB)
         # save those pre-ReLU bounds
         preReLU_UB.append(UB)
@@ -207,9 +170,9 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
         for num in range(1,numlayer-1):
             if layerbndalg == "interval":
                 # all itermediate layers
-                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, x0, eps, np.inf)
+                UB, LB = interval_bound(weights[num], biases[num], UB, LB, x0, eps, np.inf)
             if layerbndalg == "fastlin-interval":
-                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, x0, eps, np.inf)
+                UB, LB = interval_bound(weights[num], biases[num], UB, LB, x0, eps, np.inf)
                 # update diagonal matrix only, do not compute
                 fastlin_bound(tuple(weights[:num+1]),tuple(biases[:num+1]),
                 tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
@@ -223,7 +186,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
                 num + 1,tuple(diags[:num+1]),
                 x0,eps,p_n)
             if layerbndalg == "crown-interval":
-                UB, LB = get_first_layer_bound(weights[num], biases[num], UB, LB, x0, eps, np.inf)
+                UB, LB = interval_bound(weights[num], biases[num], UB, LB, x0, eps, np.inf)
                 crown_adaptive_bound(tuple(weights[:num+1]),tuple(biases[:num+1]),
                 tuple([UBs[0]]+preReLU_UB), tuple([LBs[0]]+preReLU_LB), 
                 tuple(neuron_states),
@@ -295,7 +258,7 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
     if layerbndalg == "crown-general" or layerbndalg == "crown-adaptive" or layerbndalg == "fastlin" or layerbndalg == "interval" \
             or layerbndalg == "fastlin-interval" or layerbndalg == "crown-interval":
         if layerbndalg == "interval":
-            UB, LB = get_first_layer_bound(W_last, b_last, UB, LB, x0, eps, np.inf)
+            UB, LB = interval_bound(W_last, b_last, UB, LB, x0, eps, np.inf)
         if layerbndalg == "fastlin" or layerbndalg == "fastlin-interval":
             # the last layer's weight has been replaced
             UB, LB = fastlin_bound(tuple(weights[:num]+[W_last]),tuple(biases[:num]+[b_last]),
@@ -342,13 +305,13 @@ def compute_bounds(weights, biases, pred_label, target_label, x0, predictions, n
     if untargeted:
         for j in range(W.shape[0]):
             if j < c:
-                print("    {:.2f} < f_c - f_{} < {:.2f}".format(LB[j], j, UB[j]))
+                print("    {:.4f} < f_c - f_{} < {:.4f}".format(LB[j], j, UB[j]))
             elif j > c:
-                print("    {:.2f} < f_c - f_{} < {:.2f}".format(LB[j-1], j, UB[j-1]))
+                print("    {:.4f} < f_c - f_{} < {:.4f}".format(LB[j-1], j, UB[j-1]))
         else:
             gap_gx = np.min(LB)
     else:
-        print("    {:.2f} < f_c - f_j < {:.2f}".format(LB[0], UB[0]))
+        print("    {:.4f} < f_c - f_j < {:.4f}".format(LB[0], UB[0]))
         gap_gx = LB[0]
 
     # Now "weights" are already transposed, so can pass weights directly to compute_max_grad_norm. 
