@@ -12,6 +12,7 @@
 import sys
 from numba import jit, njit
 import numpy as np
+from bound_interval import interval_bound
 
 
 # bound a list of A matrix
@@ -88,22 +89,12 @@ def fastlin_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,diags,x0,eps,p_n,skip=False)
             A = np.dot(A, Ws[i-1] * diags[i-1])
         else:
             A = np.dot(A, Ws[i-1]) # diags[0] is 1
-    # after the loop is done we get A0
-    UB_final += constants
-    LB_final += constants
 
-    # step 6: bounding A0 * x
-    x_UB = np.empty_like(UBs[0])
-    x_LB = np.empty_like(LBs[0])
-    
-    Ax0 = np.dot(A,x0)
-
-    # dual norm
-    q_n = np.inf if p_n == 1 else 1.0 / (1.0 - 1.0 / p_n)
-    for j in range(A.shape[0]):        
-        dualnorm_Aj = np.linalg.norm(A[j], q_n)
-        UB_final[j] += (Ax0[j]+eps*dualnorm_Aj)
-        LB_final[j] += (Ax0[j]-eps*dualnorm_Aj)
+    # now we have obtained A x + b_L <= f(x) <= A x + b_U
+    # treat it as a one layer network and obtain bounds
+    UB_first, LB_first = interval_bound(A, constants, UBs[0], LBs[0], x0, eps, p_n)
+    UB_final += UB_first
+    LB_final += LB_first
 
     return UB_final, LB_final
 

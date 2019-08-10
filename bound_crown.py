@@ -212,7 +212,7 @@ def crown_general_bound(Ws,bs,UBs,LBs,neuron_state,nlayer,bounds_ul,x0,eps,p_n):
         A_LB = np.dot(A_LB, Ws[i-1])
     # after the loop is done we get A0
     
-    # now we have obtained A_L x + b_L f(x) <= A_U x + b_U
+    # now we have obtained A_L x + b_L <= f(x) <= A_U x + b_U
     # treat it as a one layer network and obtain bounds
     UB_first, _ = interval_bound(A_UB, constants_ub, UBs[0], LBs[0], x0, eps, p_n)
     _, LB_first = interval_bound(A_LB, constants_lb, UBs[0], LBs[0], x0, eps, p_n)
