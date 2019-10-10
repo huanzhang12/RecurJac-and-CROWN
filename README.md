@@ -1,30 +1,33 @@
-*RecurJac*: An Efficient *Recur*sive Algorithm for Bounding *Jac*obian Matrix of Neural Networks
+Reference Implementation of CROWN, RecurJac, Fast-Lin and Fast-Lip
 =====================================
 
-RecurJac is an efficient algorithm for obtaining element-wise lower and upper
-bounds of Jacobian matrix with respect to a neural network's input. We
-demonstrate a few applications of our algorithm, including sketching a local
-**optimization landscape**, computing **local or global Lipschitz constants**, and
-**neural network robustness verification**.
+This repository contains a Numpy reference implementation of CROWN, RecurJac,
+Fast-Lin and Fast-Lip.
 
-Lipschitz constant is an important quantity that is used in many theoretic
-analysis of deep neural networks including generalization and robustness
-analysis. However, Lipschitz constant is usually unknown or can only be obtained
-loosely (e.g., using the product of operator norm). Especially, in robustness
-verification we require a good-quality local Lipschitz constant to obtain a
-non-trivial certification.
+A new **PyTorch** implementation of CROWN and Fast-Lin can be found in the
+[CROWN-IBP repository](https://github.com/huanzhang12/CROWN-IBP), which
+includes implementation of CNN layers and efficient computation on GPUs.
 
-**RecurJac significantly improves the quality of Lipschitz constant obatained by
-our earlier algorithm, Fast-Lip.** The improvement comes from a recursive
-refinement of the layer-wise Jacobian bound. Additionally, RecurJac applies to
-a wide range of activation functions under mild assumptions, and Fast-Lip is for ReLU
-only.
+Intro
+===========
 
-RecurJac depends on **CROWN**, a verification framework we proposed in NIPS 2018
-that generalizes and outperforms our previous algorithm (**Fast-Lin**) to compute
-layer-wise outer bounds.  This repository also include implementations of our
-previous algorithms (CROWN, Fast-Lin and Fast-Lip). RecurJac outperforms
-Fast-Lip by up to a few magnitudes due to its recursive bound refinement.
+**CROWN** is a neural network verification framework that linearizes general
+activation functions and creates linear upper and lower bounds for neural
+network outputs in a layer-by-layer manner. CROWN can be seen as a special case
+of solving a LP relaxed neural network (Salman et al., 2019), but is much more
+efficient than LP solvers. CROWN can be used as a general tool for bounding
+neural networks. It generalizes and outperforms our previous algorithm
+(Fast-Lin) by giving tighter verification bounds for ReLU networks as well as
+supporting other general activation functions.
+
+**RecurJac** is an efficient algorithm for obtaining element-wise lower and
+upper bounds of Jacobian matrix with respect to a neural network's input, and
+can be used for computing local or global Lipschitz constants, as well as
+neural network robustness verification.  RecurJac significantly improves the
+quality of Lipschitz constant obtained by our earlier algorithm, Fast-Lip.
+The improvement comes from a recursive refinement of the layer-wise Jacobian
+bound.  Additionally, RecurJac applies to a wide range of activation functions
+under mild assumptions (Fast-Lip is for ReLU only).
 
 This repository contains many improvements, cleanups and fixes to the
 implementation of our previous algorithms (Fast-Lin, Fast-Lip and CROWN).  **It
@@ -73,19 +76,16 @@ quite slow on AMD CPUs.
 After installing prerequisites, clone our repository:
 
 ```
-git clone https://github.com/huanzhang12/RecurJac.git
-cd RecurJac
+git clone https://github.com/huanzhang12/RecurJac-and-CROWN.git
+cd RecurJac-and-CROWN
 ```
 
-Our pretrained models can be download here:
+RecurJac pretrained models can be download here:
 
 ```
 wget http://download.huan-zhang.com/models/adv/robustness/models_recurjac.tar
 tar xvf models_recurjac.tar
 ```
-
-If you are interested in using the models we used in previous papers [2,3], they are available below.
-Otherwise you can skip this step and go to next section.
 
 For models used in CROWN (paper [2]):
 ```
@@ -108,36 +108,40 @@ The main interface for computing bounds is `main.py`. We first give some example
 to use it. Note that the first run may take some time because any necessary datasets will
 be downloaded automatically.
 
-### Local Optimization Landscape (RecurJac)
+### Robustness Certification (RecurJac, CROWN, Fast-Lin, Fast-Lip)
 
-In this task, we try to find the largest perturbation (denoted as R\_max in
-some Lp norm) where at least one element in Jacobian are knwon to be positive
-or negative. In other words, no points have a zero gradient inside this Lp ball
-with radius R\_max. This tasks is reported in Figure 2 in our paper [1].
+In this task, we evaluate the robustness lower bound of a neural network model.
+Within this lower bound, we can guarantee that no adversarial examples exist.
+This task is reported in Table 1 in our paper [1].
 
-Using the following command, we run RecurJac on *100* correctly classified
-images from class *1*, using the model file *`models/mnist_5layer_leaky_20`* (a
-5 layer leaky-ReLU MNIST network with 20 neurons per layer).  We use
-*CROWN-general* to compute layer-wise outer bounds and use *RecurJac* to
-compute the Jacobian bounds.  The input is perturb in a *L2* ball. The initial
-perturbation is set to *0.1*, and a binary search procedure is used to find
-R\_max (so the initial value is not very important).
-
-```
-python3 main.py --task landscape --numimage 100 --targettype 1 --modelfile models/mnist_5layer_leaky_20 --layerbndalg crown-general --jacbndalg recurjac --norm 2 --eps 0.1 --lipsteps 1
-```
-
-If `lipsteps` is set to values other than 1, some additional values of eps will
-be evaluated between 0 and R\_max, which is not necessary for this task.
-
-The command above will print results to the terminal. The final results are at
-the last line:
+Using the following command, we run RecurJac on *10* correctly classified
+images, and compute the robustness lower bound against a *random* target class,
+using the model file *`models/mnist_3layer_relu_1024_adv_retrain`* (a 3-layer
+MNIST model with adversarial training). We use *CROWN-adaptive* to compute
+layer-wise outer bounds and use *RecurJac* to compute robustness certification.
+The input is perturb in a *L_inf* ball.  The initial perturbation is set to
+*0.2*, and a binary search procedure finds the best lower bound (so the initial
+value is not very important).
 
 ```
-[L0] model = models/mnist_5layer_leaky_20, numimage = 100, avg_max_eps = 0.21103, avg_lipschitz_max = 27.2158, opnorm_global_lipschitz = 177.2929
+python3 main.py --task robustness --numimage 10 --targettype random --norm i --modelfile models/mnist_3layer_relu_1024_adv_retrain --layerbndalg crown-adaptive --jacbndalg recurjac --eps 0.2
 ```
 
-where `avg_max_eps` is the average R\_max over 100 images.
+The last line of output is something like:
+
+```
+[L0] model = models/mnist_3layer_relu_1024_adv_retrain, avg robustness_lb = 0.14417, numimage = 10
+```
+
+which indicates the average robustness lower bound for 10 images is 0.14417.
+
+For CROWN and Fast-Lin, `--jacbndalg` should be set to `disabled`, and
+`--layerbndalg` should be set to `crown-adaptive` or `fastlin` for ReLU networks,
+or `crown-general` for other activation functions. To favor running time
+instead of getting the tightest bound, you can decrease `--lipstep` and
+`--step` parameters to reduce the number of integral intervals and binary
+search steps (the defaults are 15 and 15, respectively).
+
 
 ### Lipschitz Constant Computation (RecurJac, Fast-Lip)
 
@@ -182,39 +186,37 @@ Changing `--jacbndalg` parameter value to `fastlip to run the same task using Fa
 our paper [3].
 
 
-### Robustness Certification (RecurJac, CROWN, Fast-Lin, Fast-Lip)
+### Local Optimization Landscape (RecurJac)
 
-In this task, we evaluate the robustness lower bound of a neural network model.
-Within this lower bound, we can guarantee that no adversarial examples exist.
-This task is reported in Table 1 in our paper [1].
+In this task, we try to find the largest perturbation (denoted as R\_max in
+some Lp norm) where at least one element in Jacobian are knwon to be positive
+or negative. In other words, no points have a zero gradient inside this Lp ball
+with radius R\_max. This tasks is reported in Figure 2 in our paper [1].
 
-Using the following command, we run RecurJac on *10* correctly classified
-images, and compute the robustness lower bound against a *random* target class,
-using the model file *`models/mnist_3layer_relu_1024_adv_retrain`* (a 3-layer
-MNIST model with adversarial training). We use *CROWN-adaptive* to compute
-layer-wise outer bounds and use *RecurJac* to compute robustness certification.
-The input is perturb in a *L_inf* ball.  The initial perturbation is set to
-*0.2*, and a binary search procedure finds the best lower bound (so the initial
-value is not very important).
-
-```
-python3 main.py --task robustness --numimage 10 --targettype random --norm i --modelfile models/mnist_3layer_relu_1024_adv_retrain --layerbndalg crown-adaptive --jacbndalg recurjac --eps 0.2
-```
-
-The last line of output is something like:
+Using the following command, we run RecurJac on *100* correctly classified
+images from class *1*, using the model file *`models/mnist_5layer_leaky_20`* (a
+5 layer leaky-ReLU MNIST network with 20 neurons per layer).  We use
+*CROWN-general* to compute layer-wise outer bounds and use *RecurJac* to
+compute the Jacobian bounds.  The input is perturb in a *L2* ball. The initial
+perturbation is set to *0.1*, and a binary search procedure is used to find
+R\_max (so the initial value is not very important).
 
 ```
-[L0] model = models/mnist_3layer_relu_1024_adv_retrain, avg robustness_lb = 0.14417, numimage = 10
+python3 main.py --task landscape --numimage 100 --targettype 1 --modelfile models/mnist_5layer_leaky_20 --layerbndalg crown-general --jacbndalg recurjac --norm 2 --eps 0.1 --lipsteps 1
 ```
 
-which indicates the average robustness lower bound for 10 images is 0.14417.
+If `lipsteps` is set to values other than 1, some additional values of eps will
+be evaluated between 0 and R\_max, which is not necessary for this task.
 
-For CROWN and Fast-Lin, `--jacbndalg` should be set to `disabled`, and
-`--layerbndalg` should be set to `crown-adaptive` or `fastlin` for ReLU networks,
-or `crown-general` for other activation functions. To favor running time
-instead of getting the tightest bound, you can decrease `--lipstep` and
-`--step` parameters to reduce the number of integral intervals and binary
-search steps (the defaults are 15 and 15, respectively).
+The command above will print results to the terminal. The final results are at
+the last line:
+
+```
+[L0] model = models/mnist_5layer_leaky_20, numimage = 100, avg_max_eps = 0.21103, avg_lipschitz_max = 27.2158, opnorm_global_lipschitz = 177.2929
+```
+
+where `avg_max_eps` is the average R\_max over 100 images.
+
 
 Train your own model
 --------------------
@@ -318,6 +320,16 @@ BibTex Entries
   title = "Efficient Neural Network Robustness Certification with General Activation Functions",
   booktitle = "Advances in Neural Information Processing Systems (NIPS), arXiv preprint arXiv:1811.00866",
   year = "2018",
+  month = "dec"
+}
+```
+
+```
+@inproceedings{salman2019convex,
+  author={Salman, Hadi and Yang, Greg and Zhang, Huan and Hsieh, Cho-Jui and Zhang, Pengchuan},
+  title={A Convex Relaxation Barrier to Tight Robustness Verification of Neural Networks},
+  booktitle = "Advances in Neural Information Processing Systems (NeurIPS), arXiv preprint arXiv:1902.08722",
+  year= "2019",
   month = "dec"
 }
 ```
