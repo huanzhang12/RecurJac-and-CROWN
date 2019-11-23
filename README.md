@@ -5,8 +5,8 @@ This repository contains a Numpy reference implementation of CROWN, RecurJac,
 Fast-Lin and Fast-Lip.
 
 A new **PyTorch** implementation of CROWN and Fast-Lin can be found in the
-[CROWN-IBP repository](https://github.com/huanzhang12/CROWN-IBP), which
-includes implementation of CNN layers and efficient computation on GPUs.
+[CROWN-IBP repository](https://github.com/huanzhang12/CROWN-IBP#compute-crown-verified-errors), which
+includes implementation of **CNN** layers and efficient computation on **GPUs**.
 
 Intro
 ===========
